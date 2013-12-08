@@ -230,7 +230,7 @@ private:
     int radius_u_;
     int radius_v_;
     void *buffer_;
-    decltype(&MedianProcessor<uint8_t, InstructionSet::SSE2>::calculate_median) processor_;
+    decltype(&MedianProcessor<uint8_t, InstructionSet::SSE2>::calculate_median) processors_[3];
 
     static const int MAX_RADIUS = 127;
     static const int MIN_MODE = -255;
@@ -252,6 +252,12 @@ MedianBlur::MedianBlur(PClip child, int radius_y, int radius_u, int radius_v, IS
     int planes[] = { PLANAR_Y, PLANAR_U, PLANAR_V };
     int radii[] = { radius_y, radius_u, radius_v };
     int min_width = vi.width;
+
+#pragma warning(disable: 4800)
+    bool sse2 = env->GetCPUFlags() & CPUF_SSE2;
+#pragma warning(default: 4800)
+
+    int hist_size = 0;
     for (int i = 0; i < (vi.IsY8() ? 1 : 3); ++i) {
         if (radii[i] <= 0) {
             continue;
@@ -259,44 +265,35 @@ MedianBlur::MedianBlur(PClip child, int radius_y, int radius_u, int radius_v, IS
         int width = vi.width >> vi.GetPlaneWidthSubsampling(planes[i]);
         int height = vi.width >> vi.GetPlaneHeightSubsampling(planes[i]);
         int core_size = radii[i]*2 + 1;
-        min_width = std::min(width, min_width);
         if (width < core_size || height < core_size) {
             env->ThrowError("MedianBlur: image is too small for this radius!");
         }
-    }
 
-#pragma warning(disable: 4800)
-    bool sse2 = env->GetCPUFlags() & CPUF_SSE2;
-#pragma warning(default: 4800)
-
-    int max_radius = std::max(std::max(radius_y, radius_v), radius_v);
-    if (max_radius > 0) {
-        int hist_size;
         //special cases make sense only when SSE2 is available, otherwise generic routine will be faster
-        if (max_radius == 1 && sse2 && min_width > 16) {
-            processor_ = &calculate_median_r1;
-        } else if (max_radius == 2 && sse2 && min_width > 16) {
-            processor_ = &calculate_median_r2;
-        } else if (max_radius < 8) {
-            hist_size = MedianProcessor<uint8_t, InstructionSet::PLAIN_C>::HISTOGRAM_SIZE;
+        if (radii[i] == 1 && sse2 && width > 16) {
+            processors_[i] = &calculate_median_r1;
+        } else if (radii[i] == 2 && sse2 && width > 16) {
+            processors_[i] = &calculate_median_r2;
+        } else if (radii[i] < 8) {
+            hist_size = std::max(hist_size, MedianProcessor<uint8_t, InstructionSet::PLAIN_C>::HISTOGRAM_SIZE);
             if (sse2) {
-                processor_ = &MedianProcessor<uint8_t, InstructionSet::SSE2>::calculate_median;
+                processors_[i] = &MedianProcessor<uint8_t, InstructionSet::SSE2>::calculate_median;
             } else {
-                processor_ = &MedianProcessor<uint8_t, InstructionSet::PLAIN_C>::calculate_median;
+                processors_[i] = &MedianProcessor<uint8_t, InstructionSet::PLAIN_C>::calculate_median;
             }
         } else {
-            hist_size = MedianProcessor<uint16_t, InstructionSet::PLAIN_C>::HISTOGRAM_SIZE;
+            hist_size = std::max(hist_size, MedianProcessor<uint16_t, InstructionSet::PLAIN_C>::HISTOGRAM_SIZE);
             if (sse2) {
-                processor_ = &MedianProcessor<uint16_t, InstructionSet::SSE2>::calculate_median;
+                processors_[i] = &MedianProcessor<uint16_t, InstructionSet::SSE2>::calculate_median;
             } else {
-                processor_ = &MedianProcessor<uint16_t, InstructionSet::PLAIN_C>::calculate_median;
+                processors_[i] = &MedianProcessor<uint16_t, InstructionSet::PLAIN_C>::calculate_median;
             }
         }
+    }
 
-        if (!sse2 || max_radius > 2) {
-            //allocate buffer only for generic approach
-            buffer_ = _aligned_malloc((vi.width + radius_y * 2) * hist_size, 16);
-        }
+    if (!sse2 || radius_u > 2 || radius_v > 2 || radius_y > 2) {
+        //allocate buffer only for generic approach
+        buffer_ = _aligned_malloc(vi.width  * hist_size, 16);
     }
 }
 
@@ -313,7 +310,7 @@ PVideoFrame MedianBlur::GetFrame(int n, IScriptEnvironment *env) {
         int height = src->GetHeight(plane);
 
         if (radius > 0) {
-            processor_(dst->GetWritePtr(plane), src->GetReadPtr(plane), dst->GetPitch(plane),
+            processors_[i](dst->GetWritePtr(plane), src->GetReadPtr(plane), dst->GetPitch(plane),
                 src->GetPitch(plane), width, height, radius, buffer_);
         } else if (radius == 0) {
             env->BitBlt(dst->GetWritePtr(plane), dst->GetPitch(plane),
