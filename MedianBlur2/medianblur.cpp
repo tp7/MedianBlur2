@@ -28,6 +28,33 @@ static __forceinline int calculate_window_side_length(int radius, int x, int wid
     return length;
 }
 
+template<typename T>
+static __forceinline __m128i simd_adds(const __m128i &a, const __m128i &b) {}
+
+template<>
+static __forceinline __m128i simd_adds<uint8_t>(const __m128i &a, const __m128i &b) {
+    return _mm_adds_epu8(a, b);
+}
+
+template<>
+static __forceinline __m128i simd_adds<uint16_t>(const __m128i &a, const __m128i &b) {
+    return _mm_adds_epu16(a, b);
+}
+
+template<typename T>
+static __forceinline __m128i simd_subs(const __m128i &a, const __m128i &b) {}
+
+template<>
+static __forceinline __m128i simd_subs<uint8_t>(const __m128i &a, const __m128i &b) {
+    return _mm_subs_epu8(a, b);
+}
+
+template<>
+static __forceinline __m128i simd_subs<uint16_t>(const __m128i &a, const __m128i &b) {
+    return _mm_subs_epu16(a, b);
+}
+
+
 template<typename T, InstructionSet instruction_set>
 class MedianProcessor
 {
@@ -63,7 +90,7 @@ class MedianProcessor
         for (int i = 0; i < sizeof(T); ++i) {
             __m128i aval = _mm_load_si128(reinterpret_cast<const __m128i*>(a)+i);
             __m128i bval = _mm_load_si128(reinterpret_cast<const __m128i*>(b)+i);
-            __m128i sum = _mm_adds_epu16(aval, bval);
+            __m128i sum = simd_adds<T>(aval, bval);
             _mm_store_si128(reinterpret_cast<__m128i*>(a)+i, sum);
         }
     }
@@ -72,7 +99,7 @@ class MedianProcessor
         for (int i = 0; i < sizeof(T); ++i) {
             __m128i aval = _mm_load_si128(reinterpret_cast<const __m128i*>(a)+i);
             __m128i bval = _mm_load_si128(reinterpret_cast<const __m128i*>(b)+i);
-            __m128i sum = _mm_subs_epu16(aval, bval);
+            __m128i sum = simd_subs<T>(aval, bval);
             _mm_store_si128(reinterpret_cast<__m128i*>(a)+i, sum);
         }
     }
