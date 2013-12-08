@@ -16,82 +16,6 @@ enum class InstructionSet
     PLAIN_C
 };
 
-template<typename T>
-static __forceinline void add_16_bins_c(T* a, const T *b) {
-    for (int i = 0; i < 16; ++i) {
-        a[i] += b[i];
-    }
-}
-
-template<typename T>
-static __forceinline void sub_16_bins_c(T* a, const T *b) {
-    for (int i = 0; i < 16; ++i) {
-        a[i] -= b[i];
-    }
-}
-
-template<typename T>
-static __forceinline void zero_single_bin_c(T* a) {
-    for (int i = 0; i < 16; ++i) {
-        a[i] = 0;
-    }
-}
-
-template<typename T>
-static __forceinline void add_16_bins_sse2(T* a, const T *b) {
-    for (int i = 0; i < sizeof(T); ++i) {
-        __m128i aval = _mm_load_si128(reinterpret_cast<const __m128i*>(a)+i);
-        __m128i bval = _mm_load_si128(reinterpret_cast<const __m128i*>(b)+i);
-        __m128i sum = _mm_adds_epu16(aval, bval);
-        _mm_store_si128(reinterpret_cast<__m128i*>(a)+i, sum);
-    }
-}
-
-template<typename T>
-static __forceinline void sub_16_bins_sse2(T* a, const T *b) {
-    for (int i = 0; i < sizeof(T); ++i) {
-        __m128i aval = _mm_load_si128(reinterpret_cast<const __m128i*>(a)+i);
-        __m128i bval = _mm_load_si128(reinterpret_cast<const __m128i*>(b)+i);
-        __m128i sum = _mm_subs_epu16(aval, bval);
-        _mm_store_si128(reinterpret_cast<__m128i*>(a)+i, sum);
-    }
-}
-
-template<typename T>
-static __forceinline void zero_single_bin_sse2(T* a) {
-    __m128i zero = _mm_setzero_si128();
-    for (int i = 0; i < sizeof(T); ++i) {
-        _mm_store_si128(reinterpret_cast<__m128i*>(a)+i, zero);
-    }
-}
-
-template<InstructionSet instruction_set, typename T>
-static __forceinline void add_16_bins(T* a, const T *b) {
-    if (instruction_set == InstructionSet::SSE2) {
-        add_16_bins_sse2(a, b);
-    } else {
-        add_16_bins_c(a, b);
-    }
-}
-
-template<InstructionSet instruction_set, typename T>
-static __forceinline void sub_16_bins(T* a, const T *b) {
-    if (instruction_set == InstructionSet::SSE2) {
-        sub_16_bins_sse2(a, b);
-    } else {
-        sub_16_bins_c(a, b);
-    }
-}
-
-template<InstructionSet instruction_set, typename T>
-static __forceinline void zero_single_bin(T* a) {
-    if (instruction_set == InstructionSet::SSE2) {
-        zero_single_bin_sse2(a);
-    } else {
-        zero_single_bin_c(a);
-    }
-}
-
 static __forceinline int calculate_window_side_length(int radius, int x, int width) {
     int length = radius + 1;
     if (x <= radius) {
@@ -105,7 +29,7 @@ static __forceinline int calculate_window_side_length(int radius, int x, int wid
 }
 
 template<typename T, InstructionSet instruction_set>
-struct MedianProcessor
+class MedianProcessor
 {
     typedef struct {
         T coarse[16];
@@ -117,6 +41,74 @@ struct MedianProcessor
         int end;
     } ColumnPair;
 
+    static __forceinline void add_16_bins_c(T* a, const T *b) {
+        for (int i = 0; i < 16; ++i) {
+            a[i] += b[i];
+        }
+    }
+
+    static __forceinline void sub_16_bins_c(T* a, const T *b) {
+        for (int i = 0; i < 16; ++i) {
+            a[i] -= b[i];
+        }
+    }
+
+    static __forceinline void zero_single_bin_c(T* a) {
+        for (int i = 0; i < 16; ++i) {
+            a[i] = 0;
+        }
+    }
+
+    static __forceinline void add_16_bins_sse2(T* a, const T *b) {
+        for (int i = 0; i < sizeof(T); ++i) {
+            __m128i aval = _mm_load_si128(reinterpret_cast<const __m128i*>(a)+i);
+            __m128i bval = _mm_load_si128(reinterpret_cast<const __m128i*>(b)+i);
+            __m128i sum = _mm_adds_epu16(aval, bval);
+            _mm_store_si128(reinterpret_cast<__m128i*>(a)+i, sum);
+        }
+    }
+
+    static __forceinline void sub_16_bins_sse2(T* a, const T *b) {
+        for (int i = 0; i < sizeof(T); ++i) {
+            __m128i aval = _mm_load_si128(reinterpret_cast<const __m128i*>(a)+i);
+            __m128i bval = _mm_load_si128(reinterpret_cast<const __m128i*>(b)+i);
+            __m128i sum = _mm_subs_epu16(aval, bval);
+            _mm_store_si128(reinterpret_cast<__m128i*>(a)+i, sum);
+        }
+    }
+
+    static __forceinline void zero_single_bin_sse2(T* a) {
+        __m128i zero = _mm_setzero_si128();
+        for (int i = 0; i < sizeof(T); ++i) {
+            _mm_store_si128(reinterpret_cast<__m128i*>(a)+i, zero);
+        }
+    }
+
+    static __forceinline void add_16_bins(T* a, const T *b) {
+        if (instruction_set == InstructionSet::SSE2) {
+            add_16_bins_sse2(a, b);
+        } else {
+            add_16_bins_c(a, b);
+        }
+    }
+
+    static __forceinline void sub_16_bins(T* a, const T *b) {
+        if (instruction_set == InstructionSet::SSE2) {
+            sub_16_bins_sse2(a, b);
+        } else {
+            sub_16_bins_c(a, b);
+        }
+    }
+
+    static __forceinline void zero_single_bin(T* a) {
+        if (instruction_set == InstructionSet::SSE2) {
+            zero_single_bin_sse2(a);
+        } else {
+            zero_single_bin_c(a);
+        }
+    }
+
+public:
     static const int HISTOGRAM_SIZE = sizeof(Histogram);
 
     static void calculate_median(uint8_t* dstp, const uint8_t* srcp, int dst_pitch, int src_pitch, int width, int height, int radius, void *buffer) {
@@ -141,13 +133,13 @@ struct MedianProcessor
             memset(fine_columns, -1, sizeof(fine_columns));
             //init histogram of the leftmost column
             for (int x = 0; x < radius; ++x) {
-                add_16_bins<instruction_set>(current_hist.coarse, histograms[x].coarse);
+                add_16_bins(current_hist.coarse, histograms[x].coarse);
             }
 
             for (int x = 0; x < width; ++x) {
                 //add one column to the right
                 if (x < (width-radius)) {
-                    add_16_bins<instruction_set>(current_hist.coarse, histograms[x+radius].coarse);
+                    add_16_bins(current_hist.coarse, histograms[x+radius].coarse);
                 }
 
                 int current_length_x = calculate_window_side_length(radius, x, width);
@@ -169,19 +161,19 @@ struct MedianProcessor
                 //partially updating fine histogram
                 if (fine_columns[coarse_idx].end < start_x) {
                     //any data we gathered is useless, drop it and build the whole block from scratch
-                    zero_single_bin<instruction_set>(current_hist.fine + fine_offset);
+                    zero_single_bin(current_hist.fine + fine_offset);
 
                     for (int i = start_x; i < end_x; ++i) {
-                        add_16_bins<instruction_set>(current_hist.fine+fine_offset, histograms[i].fine+fine_offset);
+                        add_16_bins(current_hist.fine+fine_offset, histograms[i].fine+fine_offset);
                     }
                 } else {
                     int i = fine_columns[coarse_idx].start;
                     while (i < start_x) {
-                        sub_16_bins<instruction_set>(current_hist.fine+fine_offset, histograms[i++].fine+fine_offset);
+                        sub_16_bins(current_hist.fine+fine_offset, histograms[i++].fine+fine_offset);
                     }
                     i = fine_columns[coarse_idx].end;
                     while (++i < end_x) {
-                        add_16_bins<instruction_set>(current_hist.fine+fine_offset, histograms[i].fine+fine_offset);
+                        add_16_bins(current_hist.fine+fine_offset, histograms[i].fine+fine_offset);
                     }
                 }
                 fine_columns[coarse_idx].start = start_x;
@@ -198,7 +190,7 @@ struct MedianProcessor
 
                 //subtract leftmost histogram
                 if (x >= radius) {
-                    sub_16_bins<instruction_set>(current_hist.coarse, histograms[x-radius].coarse);
+                    sub_16_bins(current_hist.coarse, histograms[x-radius].coarse);
                 }
             }
 
