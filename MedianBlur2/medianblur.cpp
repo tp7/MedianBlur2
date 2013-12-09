@@ -385,6 +385,9 @@ MedianBlur::MedianBlur(PClip child, int radius_y, int radius_u, int radius_v, IS
     if (!sse2 || radius_u > 2 || radius_v > 2 || radius_y > 2) {
         //allocate buffer only for generic approach
         buffer_ = _aligned_malloc(vi.width  * hist_size, 16);
+        if (!buffer_) {
+            env->ThrowError("MedianBlurTemp: Couldn't callocate buffer.");
+        }
     }
 }
 
@@ -465,7 +468,7 @@ MedianBlurTemp::MedianBlurTemp(PClip child, int radius_y, int radius_u, int radi
         int height = vi.width >> vi.GetPlaneHeightSubsampling(planes[i]);
         int core_size = radii[i]*2 + 1;
         if (width < core_size || height < core_size) {
-            env->ThrowError("MedianBlur: image is too small for this radius!");
+            env->ThrowError("MedianBlurTemp: image is too small for this radius!");
         }
     }
 
@@ -476,6 +479,9 @@ MedianBlurTemp::MedianBlurTemp(PClip child, int radius_y, int radius_u, int radi
     }
 
     buffer_ = _aligned_malloc(vi.width  * MedianProcessor<int32_t, InstructionSet::PLAIN_C>::HISTOGRAM_SIZE, 16);
+    if (!buffer_) {
+        env->ThrowError("MedianBlurTemp: Couldn't callocate buffer.");
+    }
 }
 
 PVideoFrame MedianBlurTemp::GetFrame(int n, IScriptEnvironment *env) {
