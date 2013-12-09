@@ -480,11 +480,12 @@ MedianBlurTemp::MedianBlurTemp(PClip child, int radius_y, int radius_u, int radi
 
 PVideoFrame MedianBlurTemp::GetFrame(int n, IScriptEnvironment *env) {
     int frame_buffer_size = sizeof(PVideoFrame)* (radius_temp_*2+1);
-    PVideoFrame* src_frames = reinterpret_cast<PVideoFrame*>(alloca(frame_buffer_size));// new PVideoFrame[radius_temp_*2+1];
-    memset(src_frames, 0, frame_buffer_size);
+    PVideoFrame* src_frames = reinterpret_cast<PVideoFrame*>(alloca(frame_buffer_size));
     if (src_frames == nullptr) {
         env->ThrowError("MedianBlurTemp: Couldn't allocate memory on stack. This is a bug, please report");
     }
+    memset(src_frames, 0, frame_buffer_size);
+    
     PVideoFrame src = child->GetFrame(n, env);
     int frame_count = 0;
     for (int i = -radius_temp_; i <= radius_temp_; ++i) {
