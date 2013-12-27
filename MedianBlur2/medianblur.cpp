@@ -532,6 +532,11 @@ PVideoFrame MedianBlurTemp::GetFrame(int n, IScriptEnvironment *env) {
             memset(dst->GetWritePtr(plane), -radius, dst->GetPitch(plane)*height);
         }
     }
+
+    for (int i = 0; i < frame_count; ++i) {
+        src_frames[i].~PVideoFrame();
+    }
+
     return dst;
 }
 
@@ -550,6 +555,6 @@ const AVS_Linkage *AVS_linkage = nullptr;
 extern "C" __declspec(dllexport) const char* __stdcall AvisynthPluginInit3(IScriptEnvironment* env, const AVS_Linkage* const vectors) {
     AVS_linkage = vectors;
     env->AddFunction("MedianBlur", "c[radiusy]i[radiusu]i[radiusv]i", create_median_blur, 0);
-    env->AddFunction("MedianBlurTemp", "c[radiusy]i[radiusu]i[radiusv]i[temporalradius]i", create_temporal_median_blur, 0);
+    env->AddFunction("MedianBlurTemporal", "c[radiusy]i[radiusu]i[radiusv]i[temporalradius]i", create_temporal_median_blur, 0);
     return "Kawaikunai";
 }

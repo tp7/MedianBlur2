@@ -138,6 +138,7 @@
     <ClCompile Include="medianblur.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="avisynth.h" />
     <ClInclude Include="special.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
