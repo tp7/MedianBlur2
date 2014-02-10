@@ -324,7 +324,6 @@ private:
     decltype(&MedianProcessor<uint8_t, InstructionSet::SSE2>::calculate_median) processors_[3];
 
     static const int MAX_RADIUS = 127;
-    static const int MIN_MODE = -255;
 };
 
 MedianBlur::MedianBlur(PClip child, int radius_y, int radius_u, int radius_v, IScriptEnvironment* env)
@@ -335,9 +334,6 @@ MedianBlur::MedianBlur(PClip child, int radius_y, int radius_u, int radius_v, IS
 
     if (radius_y > MAX_RADIUS || radius_u > MAX_RADIUS || radius_v > MAX_RADIUS) {
         env->ThrowError("MedianBlur: radius is too large. Must be between 0 and %i", MAX_RADIUS);
-    }
-    if (radius_y < MIN_MODE || radius_u < MIN_MODE || radius_v < MIN_MODE) {
-        env->ThrowError("MedianBlur: radius is too small. Must be between 0 and %i", MAX_RADIUS);
     }
 
     int planes[] = { PLANAR_Y, PLANAR_U, PLANAR_V };
@@ -409,8 +405,10 @@ PVideoFrame MedianBlur::GetFrame(int n, IScriptEnvironment *env) {
         } else if (radius == 0) {
             env->BitBlt(dst->GetWritePtr(plane), dst->GetPitch(plane),
                 src->GetReadPtr(plane), src->GetPitch(plane), width, height);
-        } else {
+        } else if (radius > -255) {
             memset(dst->GetWritePtr(plane), -radius, dst->GetPitch(plane)*height);
+        } else {
+            memset(dst->GetWritePtr(plane), 0, dst->GetPitch(plane)*height);
         }
     }
 
@@ -437,7 +435,6 @@ private:
     decltype(&MedianProcessor<int32_t, InstructionSet::SSE2>::calculate_temporal_median) processor_;
 
     static const int MAX_RADIUS = 1024;
-    static const int MIN_MODE = -255;
 };
 
 MedianBlurTemp::MedianBlurTemp(PClip child, int radius_y, int radius_u, int radius_v, int radius_temp, IScriptEnvironment* env)
@@ -448,9 +445,6 @@ MedianBlurTemp::MedianBlurTemp(PClip child, int radius_y, int radius_u, int radi
 
     if (radius_y > MAX_RADIUS || radius_u > MAX_RADIUS || radius_v > MAX_RADIUS) {
         env->ThrowError("MedianBlurTemp: radius is too large. Must be between 0 and %i", MAX_RADIUS);
-    }
-    if (radius_y < MIN_MODE || radius_u < MIN_MODE || radius_v < MIN_MODE) {
-        env->ThrowError("MedianBlurTemp: radius is too small. Must be between 0 and %i", MAX_RADIUS);
     }
     if (radius_temp <= 0) {
         env->ThrowError("MedianBlurTemp: Invalid temporal radius. Should be greater than zero.");
@@ -526,8 +520,10 @@ PVideoFrame MedianBlurTemp::GetFrame(int n, IScriptEnvironment *env) {
         } else if (radius == -1) {
             env->BitBlt(dst->GetWritePtr(plane), dst->GetPitch(plane),
                 src->GetReadPtr(plane), src->GetPitch(plane), width, height);
-        } else {
+        } else if (radius > -255) {
             memset(dst->GetWritePtr(plane), -radius, dst->GetPitch(plane)*height);
+        } else {
+            memset(dst->GetWritePtr(plane), 0, dst->GetPitch(plane)*height);
         }
     }
 
