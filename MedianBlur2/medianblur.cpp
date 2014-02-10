@@ -491,15 +491,13 @@ PVideoFrame MedianBlurTemp::GetFrame(int n, IScriptEnvironment *env) {
         env->ThrowError("MedianBlurTemp: Couldn't allocate memory on stack. This is a bug, please report");
     }
     memset(src_frames, 0, frame_buffer_size);
-    
+
     PVideoFrame src = child->GetFrame(n, env);
     int frame_count = 0;
     for (int i = -radius_temp_; i <= radius_temp_; ++i) {
         int frame_number = n + i;
-        if (frame_number >= 0 && frame_number < vi.num_frames) {
-            //don't get the n'th frame twice
-            src_frames[frame_count++] = (i == 0 ? src : child->GetFrame(frame_number, env));
-        }
+        //don't get the n'th frame twice
+        src_frames[frame_count++] = (i == 0 ? src : child->GetFrame(frame_number, env));
     }
     const uint8_t **src_ptrs = reinterpret_cast<const uint8_t **>(alloca(sizeof(uint8_t*)* frame_count));
     int *src_pitches = reinterpret_cast<int*>(alloca(sizeof(int)* frame_count));
