@@ -405,7 +405,7 @@ PVideoFrame MedianBlur::GetFrame(int n, IScriptEnvironment *env) {
         } else if (radius == 0) {
             env->BitBlt(dst->GetWritePtr(plane), dst->GetPitch(plane),
                 src->GetReadPtr(plane), src->GetPitch(plane), width, height);
-        } else if (radius > -255) {
+        } else if (radius > -256) {
             memset(dst->GetWritePtr(plane), -radius, dst->GetPitch(plane)*height);
         } else {
             memset(dst->GetWritePtr(plane), 0, dst->GetPitch(plane)*height);
@@ -520,7 +520,7 @@ PVideoFrame MedianBlurTemp::GetFrame(int n, IScriptEnvironment *env) {
         } else if (radius == -1) {
             env->BitBlt(dst->GetWritePtr(plane), dst->GetPitch(plane),
                 src->GetReadPtr(plane), src->GetPitch(plane), width, height);
-        } else if (radius > -255) {
+        } else if (radius > -256) {
             memset(dst->GetWritePtr(plane), -radius, dst->GetPitch(plane)*height);
         } else {
             memset(dst->GetWritePtr(plane), 0, dst->GetPitch(plane)*height);
