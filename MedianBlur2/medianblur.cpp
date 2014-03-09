@@ -350,7 +350,7 @@ MedianBlur::MedianBlur(PClip child, int radius_y, int radius_u, int radius_v, IS
             continue;
         }
         int width = vi.width >> vi.GetPlaneWidthSubsampling(planes[i]);
-        int height = vi.width >> vi.GetPlaneHeightSubsampling(planes[i]);
+        int height = vi.height >> vi.GetPlaneHeightSubsampling(planes[i]);
         int core_size = radii[i]*2 + 1;
         if (width < core_size || height < core_size) {
             env->ThrowError("MedianBlur: image is too small for this radius!");
@@ -459,7 +459,7 @@ MedianBlurTemp::MedianBlurTemp(PClip child, int radius_y, int radius_u, int radi
             continue;
         }
         int width = vi.width >> vi.GetPlaneWidthSubsampling(planes[i]);
-        int height = vi.width >> vi.GetPlaneHeightSubsampling(planes[i]);
+        int height = vi.height >> vi.GetPlaneHeightSubsampling(planes[i]);
         int core_size = radii[i]*2 + 1;
         if (width < core_size || height < core_size) {
             env->ThrowError("MedianBlurTemp: image is too small for this radius!");
